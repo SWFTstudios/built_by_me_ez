@@ -1,21 +1,22 @@
 /**
- * Cal.com inline embed bootstrap (MVP).
- * Set data-cal-link on .cal-embed-host (e.g. "yourname/single-training-session").
- * Optional: data-cal-layout="month_view" | "week_view" | etc.
+ * Cal.com namespaced inline embed (matches Cal dashboard snippets).
  *
- * If your Cal.com username is not "builtbymeez", either update each page's data-cal-link
- * or edit the HTML to use your full username/event path from the Cal dashboard.
+ * Each page: one element with classes `cal-embed-host`, plus:
+ *   data-cal-namespace — must match the namespace in your Cal embed (e.g. single-training-session)
+ *   data-cal-link      — full path e.g. omar-ndiaye-illqmu/single-training-session
+ *
+ * If the Cal username or event slug changes, update data-cal-link (and namespace if Cal renames it).
  */
 (function (C, A, L) {
-  var p = function (a, ar) {
+  let p = function (a, ar) {
     a.q.push(ar);
   };
-  var d = C.document;
+  let d = C.document;
   C.Cal =
     C.Cal ||
     function () {
-      var cal = C.Cal;
-      var ar = arguments;
+      let cal = C.Cal;
+      let ar = arguments;
       if (!cal.loaded) {
         cal.ns = {};
         cal.q = cal.q || [];
@@ -23,16 +24,16 @@
         cal.loaded = true;
       }
       if (ar[0] === L) {
-        var api = function () {
+        const api = function () {
           p(api, arguments);
         };
-        var namespace = ar[1];
-        api.q = [];
+        const namespace = ar[1];
+        api.q = api.q || [];
         if (typeof namespace === "string") {
-          cal.ns[namespace] = api;
-        } else {
-          p(cal, ar);
-        }
+          cal.ns[namespace] = cal.ns[namespace] || api;
+          p(cal.ns[namespace], ar);
+          p(cal, ["initNamespace", namespace]);
+        } else p(cal, ar);
         return;
       }
       p(cal, ar);
@@ -40,22 +41,31 @@
 })(window, "https://app.cal.com/embed/embed.js", "init");
 
 (function () {
-  var CAL_ORIGIN = "https://cal.com";
+  var ORIGIN = "https://app.cal.com";
 
   function initEmbeds() {
-    var hosts = document.querySelectorAll(".cal-embed-host[data-cal-link]");
+    var hosts = document.querySelectorAll(
+      ".cal-embed-host[data-cal-namespace][data-cal-link]"
+    );
     if (!hosts.length) return;
 
-    Cal("init", { origin: CAL_ORIGIN });
-
     hosts.forEach(function (el) {
-      var link = el.getAttribute("data-cal-link");
-      if (!link) return;
-      var layout = el.getAttribute("data-cal-layout") || "month_view";
-      Cal("inline", {
+      var namespace = el.getAttribute("data-cal-namespace");
+      var calLink = el.getAttribute("data-cal-link");
+      if (!namespace || !calLink) return;
+
+      Cal("init", namespace, { origin: ORIGIN });
+      Cal.ns[namespace]("inline", {
         elementOrSelector: el,
-        calLink: link,
-        layout: layout,
+        calLink: calLink,
+        config: {
+          layout: "month_view",
+          useSlotsViewOnSmallScreen: "true",
+        },
+      });
+      Cal.ns[namespace]("ui", {
+        hideEventTypeDetails: false,
+        layout: "month_view",
       });
     });
   }
