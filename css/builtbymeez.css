@@ -2757,3 +2757,23 @@ a {
   }
 }
 
+/* Booking detail: package note + price/duration */
+.booking-detail-stack .booking-package-note {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.booking-detail-stack .booking-price-line {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  letter-spacing: 0.02em;
+}
+
+#SEMI-PRIVATE .semi-private-card-price {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 8px 0 0;
+  letter-spacing: 0.02em;
+}
+
