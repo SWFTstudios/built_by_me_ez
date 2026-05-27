@@ -1,0 +1,21 @@
+name = "package-booking"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# KV namespace — create it first:
+#   wrangler kv:namespace create CREDITS_KV
+# Then paste the resulting ID below.
+[[kv_namespaces]]
+binding = "CREDITS_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secrets (set via CLI, never commit values):
+#   wrangler secret put STRIPE_WEBHOOK_SECRET
+#   wrangler secret put RESEND_API_KEY
+#   wrangler secret put SITE_URL
+#   wrangler secret put CAL_USERNAME
+
+[vars]
+# Non-sensitive defaults (override with secrets for production)
+CAL_USERNAME = "omar-ndiaye-illqmu"
+SITE_URL = "https://builtbymeez.com"
