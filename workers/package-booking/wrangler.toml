@@ -19,3 +19,6 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 # Non-sensitive defaults (override with secrets for production)
 CAL_USERNAME = "omar-ndiaye-illqmu"
 SITE_URL = "https://builtbymeez.com"
+# Airtable — base and table IDs are not sensitive, stored as vars
+AIRTABLE_BASE_ID  = "appSi0KcCQ41rm4XK"
+AIRTABLE_TABLE_ID = "tblByao55M5tzJWHf"

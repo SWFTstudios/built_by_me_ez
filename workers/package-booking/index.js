@@ -6,6 +6,7 @@
  *   POST /webhook/cal     — Cal.com BOOKING_CREATED (decrements credit)
  *   GET  /validate        — ?token=TOKEN  → session info for booking portal
  *   POST /resend-link     — {email} → re-emails the booking link
+ *   POST /save-lead       — saves interest lead to Airtable + emails user confirmation
  *
  * KV keys:
  *   credits:{email}   → { packageSlug, calSlug, label, total, used, token, paidAt }
@@ -17,6 +18,9 @@
  *   RESEND_API_KEY        — re_... from resend.com
  *   SITE_URL              — e.g. https://builtbymeez.com
  *   CAL_USERNAME          — e.g. omar-ndiaye-illqmu
+ *   AIRTABLE_API_KEY      — personal access token (pat...) from airtable.com/create/tokens
+ *   AIRTABLE_BASE_ID      — set in wrangler.toml [vars]
+ *   AIRTABLE_TABLE_ID     — set in wrangler.toml [vars]
  */
 
 const PACKAGES = {
@@ -64,6 +68,9 @@ export default {
       }
       if (url.pathname === '/resend-link' && request.method === 'POST') {
         return handleResendLink(request, env, cors);
+      }
+      if (url.pathname === '/save-lead' && request.method === 'POST') {
+        return handleSaveLead(request, env, cors);
       }
       return new Response('Not found', { status: 404, headers: cors });
     } catch (err) {
@@ -325,6 +332,102 @@ async function notifyOmar(env, clientEmail, pkg, bookingUrl) {
         <p>Client: ${clientEmail}<br>
            Package: ${pkg.label} (${pkg.sessions} sessions)<br>
            Booking link: <a href="${bookingUrl}">${bookingUrl}</a></p>`,
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Save lead (date-interest form → Airtable + user confirmation email)
+// ---------------------------------------------------------------------------
+
+async function handleSaveLead(request, env, cors) {
+  const body = await request.json();
+  const email = body.email?.toLowerCase().trim();
+  if (!email) {
+    return jsonResponse({ ok: false, error: 'Email required' }, 400, cors);
+  }
+
+  await Promise.all([
+    saveLeadToAirtable(env, body),
+    sendLeadConfirmationEmail(env, body),
+  ]);
+
+  return jsonResponse({ ok: true }, 200, cors);
+}
+
+async function saveLeadToAirtable(env, { name, email, package_label, ideal_dates }) {
+  if (!env.AIRTABLE_API_KEY || !env.AIRTABLE_BASE_ID || !env.AIRTABLE_TABLE_ID) {
+    console.log('[AIRTABLE SKIP] Missing credentials — lead not saved:', email);
+    return;
+  }
+
+  const res = await fetch(
+    `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${env.AIRTABLE_TABLE_ID}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.AIRTABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        records: [{
+          fields: {
+            Name:          name || 'Not provided',
+            Email:         email,
+            Package:       package_label || '',
+            Stage:         'Potential',
+            'Ideal Dates': Array.isArray(ideal_dates) ? ideal_dates.join('\n') : (ideal_dates || ''),
+            Source:        'Website — Date Interest Form',
+            'Submitted At': new Date().toISOString(),
+          },
+        }],
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('Airtable save-lead error:', err);
+  }
+}
+
+async function sendLeadConfirmationEmail(env, { name, email, package_label, ideal_dates, stripe_link }) {
+  if (!env.RESEND_API_KEY) {
+    console.log('[EMAIL SKIP] Would send lead confirmation to', email);
+    return;
+  }
+
+  const firstName = (name || '').split(' ')[0] || 'there';
+  const datesHtml = (ideal_dates && ideal_dates.length)
+    ? '<ul style="padding-left:1.2em;">' + ideal_dates.map(d => `<li>${d}</li>`).join('') + '</ul>'
+    : '<p style="color:#666;">No specific dates selected.</p>';
+
+  const payBtn = stripe_link && stripe_link !== '#'
+    ? `<a href="${stripe_link}" style="display:inline-block;margin:20px 0;padding:14px 28px;background:#ff4d00;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;">Pay &amp; Lock In My Sessions →</a>`
+    : '';
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Built By Me EZ <noreply@builtbymeez.com>',
+      to: email,
+      subject: `Your ideal training dates are saved — ${package_label}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111;">
+          <img src="${env.SITE_URL}/images/Built-By-ME-EZ-Logo-Favicon.avif" alt="Built By Me EZ" width="120" style="margin-bottom:24px;">
+          <h1 style="font-size:22px;margin-bottom:8px;">Hey ${firstName}, your dates are saved!</h1>
+          <p>We've got your preferred training schedule on file for the <strong>${package_label}</strong> package.</p>
+          <p><strong>Your selected dates:</strong></p>
+          ${datesHtml}
+          <p>When you're ready to lock these in, pay below and we'll send you a personal booking link to confirm each session.</p>
+          ${payBtn}
+          <p style="font-size:13px;color:#555;margin-top:24px;">Questions? Call <a href="tel:+12017598043" style="color:#ff4d00;">+1 (201) 759-8043</a> or email <a href="mailto:builtbymeez1@gmail.com" style="color:#ff4d00;">builtbymeez1@gmail.com</a>.</p>
+          <p style="font-size:11px;color:#999;margin-top:16px;">You're receiving this because you submitted the date-interest form on builtbymeez.com. No further emails will be sent unless you purchase a package.</p>
+        </div>`,
     }),
   });
 }
