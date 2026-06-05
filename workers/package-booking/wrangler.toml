@@ -20,10 +20,15 @@ id = "66dd167618ac4c97927a7eeebfb56cd7"
 CAL_USERNAME = "omar-ndiaye-illqmu"
 SITE_URL = "https://builtbymeez.com"
 FORM_SUBMIT_EMAIL = "builtbymeez1@gmail.com"
-# Airtable — base and table IDs are not sensitive, stored as vars
-AIRTABLE_BASE_ID  = "appSi0KcCQ41rm4XK"
-AIRTABLE_TABLE_ID = "tblByao55M5tzJWHf"
-AIRTABLE_MERCH_TABLE_ID = "tblag8GKEST2f6DnW"
+# Airtable — Personal Trainer Demo CRM (Built By Me EZ)
+AIRTABLE_BASE_ID  = "appnv92ohZuf9hmSL"
+AIRTABLE_LEADS_TABLE_ID = "tbluTQ38LPRru9Pxx"
+AIRTABLE_CLIENTS_TABLE_ID = "tbllorzeIP6XnBrjF"
+AIRTABLE_PURCHASES_TABLE_ID = "tblWVjmTXCjPe0smR"
+AIRTABLE_SESSIONS_TABLE_ID = "tblaac1fAf4f61cQs"
+AIRTABLE_MERCH_TABLE_ID = "tbl7w4Trf30AmWYzW"
+# Legacy alias used by save-lead
+AIRTABLE_TABLE_ID = "tbluTQ38LPRru9Pxx"
 # Stripe prices — Built By Me EZ Logo T-Shirt (prod_UeNIfqoPJFKKH2)
 STRIPE_PRICE_BLACK = "price_1Tf4YUEO3guv2SPL6ZRUC0JV"
 STRIPE_PRICE_BROWN = "price_1Tf4YUEO3guv2SPLG0WPBcAN"

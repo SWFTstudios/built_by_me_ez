@@ -141,6 +141,15 @@
   background: var(--pp-surface-gray);
   overflow: hidden;
   transition: border-color 0.2s, color 0.2s;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-align: inherit;
+}
+
+.product-page__color-swatch:focus-visible {
+  outline: 2px solid var(--pp-primary-container);
+  outline-offset: 2px;
 }
 
 .product-page__color-link:hover {
@@ -151,7 +160,66 @@
 .product-page__color-link.is-active {
   border-color: var(--pp-primary-container);
   color: var(--pp-on-surface-high);
+}
+
+.product-page__eyebrow {
+  font-family: var(--pp-font-label);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pp-on-surface-med);
+  margin: 0 0 0.75rem;
+}
+
+.product-page__colorway-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.product-page__colorway-option {
+  position: relative;
+}
+
+.product-page__colorway-option input {
+  position: absolute;
+  opacity: 0;
   pointer-events: none;
+}
+
+.product-page__colorway-option label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  border: 2px solid var(--pp-surface-variant);
+  font-family: var(--pp-font-label);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.product-page__colorway-option label:hover {
+  border-color: var(--pp-primary-container);
+}
+
+.product-page__colorway-option input:checked + label {
+  background: var(--pp-surface-container-high);
+  border-color: var(--pp-primary-container);
+  color: var(--pp-on-surface-high);
+}
+
+.product-page__checkout-note {
+  font-family: var(--pp-font-label);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pp-on-surface-med);
+  text-align: center;
+  margin: 1rem 0 0;
 }
 
 .product-page__color-link img {

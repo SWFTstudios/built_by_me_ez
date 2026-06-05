@@ -68,24 +68,25 @@ npx wrangler deploy
 
 **Important:** Append `?client_reference_id=SLUG` to each payment link URL in the HTML.
 
-### Merch — unified product catalog
+### Merch — Payment Links (colorway + size)
 
-| Stripe object | ID / value |
-|---------------|------------|
-| Product | `Built By Me EZ Logo T-Shirt` (`prod_UeNIfqoPJFKKH2`) |
-| Price — Black | `price_1Tf4YUEO3guv2SPL6ZRUC0JV` ($35) |
-| Price — Brown | `price_1Tf4YUEO3guv2SPLG0WPBcAN` ($35) |
-| Price — Blue | `price_1Tf4YUEO3guv2SPLKrK0mBrh` ($35) |
+T-shirt checkout uses **15 Stripe Payment Links** (5 sizes × 3 colorways). Each link has its **own Stripe product** with a descriptive name:
 
-These price IDs are configured in `wrangler.toml` as `STRIPE_PRICE_BLACK`, `STRIPE_PRICE_BROWN`, and `STRIPE_PRICE_BLUE`.
+`Built By Me EZ Logo T-Shirt — {Black|Brown|Blue} / {XS|S|M|L|XL}`
 
-T-shirt pages use **Checkout Sessions** (not Payment Links). After verifying the new flow in production, deactivate the legacy merch Payment Links:
+URLs live in `js/merch-payment-links.js`. Each checkout URL appends:
 
-| Color | Legacy Payment Link |
-|-------|---------------------|
-| Black | `https://buy.stripe.com/eVqcN5ebz3RP6c02Dq04802` |
-| Brown | `https://buy.stripe.com/9B600j9VjfAx1VK6TG04800` |
-| Blue | `https://buy.stripe.com/6oU3cv1oN741eIwb9W04801` |
+- `client_reference_id=logo-tshirt-{color}-{size}` (for the Worker webhook)
+- `prefilled_email={email}` when the customer entered one
+
+Links include shipping address collection, redirect to `products/order-confirmation.html`, and metadata (`color`, `size`, `merch_slug`) for webhooks.
+
+**Maintenance scripts** (require `STRIPE_SECRET_KEY`):
+
+```bash
+node scripts/setup-merch-stripe-links.mjs      # recreate all 15 links
+node scripts/deactivate-old-merch-links.mjs    # deactivate legacy duplicates
+```
 
 In Stripe Dashboard → Settings → Emails, enable **successful payment receipts** for customers.
 
@@ -99,15 +100,36 @@ The same webhook handles both training packages and merch. Merch sessions are id
 
 ---
 
-## 3. Airtable Setup
+## 3. Airtable Setup — Personal Trainer Demo CRM
 
-### Leads table (existing)
-- Base: `appSi0KcCQ41rm4XK`
-- Table: `tblByao55M5tzJWHf` (`AIRTABLE_TABLE_ID`)
+Base: **[Personal Trainer Demo CRM](https://airtable.com/appnv92ohZuf9hmSL)** (`appnv92ohZuf9hmSL`)
 
-### Merch Orders table
-- Table: `Merch Orders` (`tblag8GKEST2f6DnW`, `AIRTABLE_MERCH_TABLE_ID`)
-- Fields: Name, Email, Product, Color, Size, Amount, Status, Stripe Session ID, Order Date
+The Worker syncs website activity into these tables:
+
+| Table | ID | What lands here |
+|-------|-----|-----------------|
+| **Leads** | `tbluTQ38LPRru9Pxx` | Date-interest form submissions (prospects) |
+| **Clients** | `tbllorzeIP6XnBrjF` | Unified contacts — auto-created/updated by email |
+| **Package Purchases** | `tblWVjmTXCjPe0smR` | Stripe training package payments + session credits |
+| **Session Bookings** | `tblaac1fAf4f61cQs` | Each Cal.com booking; updates sessions used |
+| **Merch Orders** | `tbl7w4Trf30AmWYzW` | T-shirt checkout orders |
+
+### Suggested Interface dashboard (grouped for trainers)
+
+1. **Prospects** — `Leads` view filtered `Status = Interested` or `Follow Up`
+2. **Active Clients** — `Clients` filtered `Stage = Active Client`
+3. **Packages & Credits** — `Package Purchases` grouped by `Status`, sort by `Paid Date`
+4. **Upcoming Sessions** — `Session Bookings` filtered `Status = Scheduled`
+5. **Merch Fulfillment** — `Merch Orders` filtered `Status = Paid`
+
+### Token scopes
+
+Create a personal access token at [airtable.com/create/tokens](https://airtable.com/create/tokens) with **read/write** access to **Personal Trainer Demo CRM**, then:
+
+```bash
+npx wrangler secret put AIRTABLE_API_KEY
+npx wrangler deploy
+```
 
 ---
 
@@ -140,7 +162,7 @@ var WORKER_URL = 'https://package-booking.elombe.workers.dev';
 |---------|--------|
 | `book-sessions.html` | inline `WORKER_URL` |
 | Package pages | inline `WORKER_URL` + `js/lead-capture.js` |
-| `products/built-by-me-ez-logo-t-shirt-*.html` | inline `WORKER_URL` + `js/merch-checkout.js` |
+| `products/built-by-me-ez-logo-t-shirt.html` | `js/merch-payment-links.js` + `js/merch-product.js` + `js/merch-checkout.js` |
 
 Merch product pages require `data-merch-color="black|brown|blue"` on `<body>`.
 
@@ -149,7 +171,7 @@ Merch product pages require `data-merch-color="black|brown|blue"` on `<body>`.
 ## 7. Merch test checklist
 
 - [ ] Form blocks submit without a size selected
-- [ ] `/create-merch-checkout` returns a Stripe Checkout URL for each color
+- [ ] Checkout opens Stripe Payment Link for each color + size
 - [ ] Webhook writes one row to Airtable Merch Orders (no duplicates on retry)
 - [ ] Admin email arrives at `builtbymeez1@gmail.com`
 - [ ] Customer receives order confirmation email
