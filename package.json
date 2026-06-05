@@ -1,0 +1,24 @@
+{
+  "name": "built_by_me_ez",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SWFTstudios/built_by_me_ez.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SWFTstudios/built_by_me_ez/issues"
+  },
+  "homepage": "https://github.com/SWFTstudios/built_by_me_ez#readme",
+  "dependencies": {
+    "stripe": "^17.7.0"
+  }
+}

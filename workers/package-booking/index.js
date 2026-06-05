@@ -21,9 +21,13 @@
  *   FORM_SUBMIT_EMAIL     — builtbymeez1@gmail.com (wrangler.toml [vars])
  *   CAL_USERNAME          — e.g. omar-ndiaye-illqmu
  *   AIRTABLE_API_KEY      — personal access token (pat...) from airtable.com/create/tokens
- *   AIRTABLE_BASE_ID      — set in wrangler.toml [vars]
- *   AIRTABLE_TABLE_ID     — set in wrangler.toml [vars]
- *   AIRTABLE_MERCH_TABLE_ID — Merch Orders table in wrangler.toml [vars]
+ *   AIRTABLE_BASE_ID      — Personal Trainer Demo CRM base
+ *   AIRTABLE_LEADS_TABLE_ID — Prospects / website leads
+ *   AIRTABLE_CLIENTS_TABLE_ID — Client hub (prospects + active)
+ *   AIRTABLE_PURCHASES_TABLE_ID — Paid session packages
+ *   AIRTABLE_SESSIONS_TABLE_ID — Cal.com session bookings
+ *   AIRTABLE_MERCH_TABLE_ID — T-shirt orders
+ *   AIRTABLE_TABLE_ID     — legacy alias for leads table
  */
 
 const ALLOWED_ORIGINS = [
@@ -205,6 +209,19 @@ async function handleStripeWebhook(request, env, cors) {
   const bookingUrl = `${getSiteUrl(env)}/book-sessions.html?token=${token}`;
   await sendPackageBookingEmail(env, email, pkg, bookingUrl);
 
+  await savePackagePurchaseToAirtable(env, {
+    email,
+    name: session.customer_details?.name?.trim() || 'Not provided',
+    packageSlug,
+    label: pkg.label,
+    sessions: pkg.sessions,
+    amountCents: session.amount_total || 0,
+    stripeSessionId: session.id,
+    token,
+    bookingUrl,
+    paidAt,
+  });
+
   return new Response('OK', { status: 200, headers: cors });
 }
 
@@ -290,7 +307,7 @@ function buildMerchCheckoutParams({ email, name, size, colorSlug, merch, priceId
     billing_address_collection: 'required',
     'automatic_tax[enabled]': 'true',
     success_url: `${siteUrl}/products/order-confirmation.html?color=${colorSlug}`,
-    cancel_url: `${siteUrl}/products/built-by-me-ez-logo-t-shirt-${colorSlug}.html`,
+    cancel_url: `${siteUrl}/products/built-by-me-ez-logo-t-shirt.html`,
   };
 
   MERCH_SHIPPING_COUNTRIES.forEach((country, index) => {
@@ -319,12 +336,19 @@ async function handleMerchCheckout(session, env, cors) {
     return new Response('OK', { status: 200, headers: cors });
   }
 
-  const slug = session.client_reference_id
+  const ref = session.client_reference_id
     || session.metadata?.merch_slug
     || '';
-  const merch = MERCH_BY_SLUG[slug];
-  const name = session.metadata?.name?.trim() || 'Not provided';
-  const size = normalizeSize(session.metadata?.size) || 'Not provided';
+  const parsed = parseMerchReference(ref);
+  const merch = parsed.colorSlug
+    ? MERCH_BY_COLOR[parsed.colorSlug]
+    : MERCH_BY_SLUG[ref];
+  const name = session.metadata?.name?.trim()
+    || session.customer_details?.name?.trim()
+    || 'Not provided';
+  const size = normalizeSize(session.metadata?.size)
+    || parsed.size
+    || 'Not provided';
   const color = session.metadata?.color || merch?.color || 'Unknown';
   const productLabel = merch?.label || `Built By Me EZ Logo T-Shirt | ${color}`;
   const amountCents = session.amount_total || 0;
@@ -355,36 +379,33 @@ async function handleMerchCheckout(session, env, cors) {
 }
 
 async function saveMerchOrderToAirtable(env, order) {
-  if (!env.AIRTABLE_API_KEY || !env.AIRTABLE_BASE_ID || !env.AIRTABLE_MERCH_TABLE_ID) {
+  const merchTable = env.AIRTABLE_MERCH_TABLE_ID;
+  if (!hasAirtable(env) || !merchTable) {
     console.log('[AIRTABLE SKIP] Missing merch table credentials — order not saved:', order.email);
     return;
   }
 
-  const res = await fetch(
-    `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${env.AIRTABLE_MERCH_TABLE_ID}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.AIRTABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        records: [{
-          fields: {
-            Name: order.name,
-            Email: order.email,
-            Product: order.productLabel,
-            Color: order.color,
-            Size: order.size,
-            Amount: order.amountCents / 100,
-            Status: 'Paid',
-            'Stripe Session ID': order.stripeSessionId,
-            'Order Date': order.orderDate.slice(0, 10),
-          },
-        }],
-      }),
-    },
-  );
+  const today = order.orderDate.slice(0, 10);
+  await upsertClientByEmail(env, {
+    name: order.name,
+    email: order.email,
+    stage: 'Merch Customer',
+    source: 'Website',
+    lastActivity: today,
+  });
+
+  const res = await airtablePost(env, merchTable, {
+    Order: `${order.name} — ${order.color} ${order.size}`,
+    'Customer Name': order.name,
+    Email: order.email,
+    Product: order.productLabel,
+    Color: order.color,
+    Size: order.size,
+    Amount: order.amountCents / 100,
+    Status: 'Paid',
+    'Stripe Session ID': order.stripeSessionId,
+    'Order Date': today,
+  });
 
   if (!res.ok) {
     const err = await res.text();
@@ -452,6 +473,17 @@ async function handleCalWebhook(request, env, cors) {
     record.used += 1;
     await env.CREDITS_KV.put(creditsKey, JSON.stringify(record));
   }
+
+  const payload = body.payload || {};
+  await saveSessionBookingToAirtable(env, {
+    email: attendeeEmail,
+    packageName: record.label,
+    sessionDate: payload.startTime || payload.start || new Date().toISOString(),
+    sessionTime: payload.startTime ? formatSessionTime(payload.startTime) : '',
+    calBookingUid: payload.uid || payload.bookingId || '',
+    sessionsUsed: record.used,
+    sessionsTotal: record.total,
+  });
 
   return new Response('OK', { status: 200, headers: cors });
 }
@@ -623,39 +655,232 @@ async function handleSaveLead(request, env, cors) {
   return jsonResponse({ ok: true }, 200, cors);
 }
 
-async function saveLeadToAirtable(env, { name, email, package_label, ideal_dates }) {
-  if (!env.AIRTABLE_API_KEY || !env.AIRTABLE_BASE_ID || !env.AIRTABLE_TABLE_ID) {
+async function saveLeadToAirtable(env, { name, email, package_label, package_slug, ideal_dates, stripe_link }) {
+  if (!hasAirtable(env)) {
     console.log('[AIRTABLE SKIP] Missing credentials — lead not saved:', email);
     return;
   }
 
-  const res = await fetch(
-    `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${env.AIRTABLE_TABLE_ID}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.AIRTABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        records: [{
-          fields: {
-            Name:          name || 'Not provided',
-            Email:         email,
-            Package:       package_label || '',
-            Stage:         'Potential',
-            'Ideal Dates': Array.isArray(ideal_dates) ? ideal_dates.join('\n') : (ideal_dates || ''),
-            Source:        'Website — Date Interest Form',
-            'Submitted At': new Date().toISOString(),
-          },
-        }],
-      }),
-    },
-  );
+  const today = new Date().toISOString().slice(0, 10);
+  const idealDatesText = Array.isArray(ideal_dates)
+    ? ideal_dates.join('\n')
+    : (ideal_dates || '');
+
+  await upsertClientByEmail(env, {
+    name: name || 'Not provided',
+    email,
+    stage: 'Prospect',
+    source: 'Website',
+    lastActivity: today,
+    notes: idealDatesText ? `Preferred dates:\n${idealDatesText}` : '',
+  });
+
+  const leadsTable = env.AIRTABLE_LEADS_TABLE_ID || env.AIRTABLE_TABLE_ID;
+  const res = await airtablePost(env, leadsTable, {
+    Name: name || 'Not provided',
+    Email: email,
+    Status: 'Interested',
+    'Package Interest': package_label || '',
+    'Package Slug': package_slug || '',
+    'Ideal Dates': idealDatesText,
+    'Lead Source': 'Website — Date Interest Form',
+    'Submitted At': new Date().toISOString(),
+    'Stripe Link': stripe_link || '',
+  });
 
   if (!res.ok) {
     const err = await res.text();
     console.error('Airtable save-lead error:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Airtable — Personal Trainer Demo CRM (appnv92ohZuf9hmSL)
+// ---------------------------------------------------------------------------
+
+function hasAirtable(env) {
+  return !!(env.AIRTABLE_API_KEY && env.AIRTABLE_BASE_ID);
+}
+
+function airtableHeaders(env) {
+  return {
+    Authorization: `Bearer ${env.AIRTABLE_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+function escapeFormulaString(value) {
+  return String(value || '').replace(/'/g, "\\'");
+}
+
+async function airtablePost(env, tableId, fields) {
+  return fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${tableId}`, {
+    method: 'POST',
+    headers: airtableHeaders(env),
+    body: JSON.stringify({ records: [{ fields }] }),
+  });
+}
+
+async function airtablePatch(env, tableId, recordId, fields) {
+  return fetch(`https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${tableId}`, {
+    method: 'PATCH',
+    headers: airtableHeaders(env),
+    body: JSON.stringify({ records: [{ id: recordId, fields }] }),
+  });
+}
+
+async function airtableFindByEmail(env, tableId, email, emailFieldName = 'Email') {
+  const formula = `{${emailFieldName}}='${escapeFormulaString(email.toLowerCase())}'`;
+  const url = `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${tableId}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
+  const res = await fetch(url, { headers: airtableHeaders(env) });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.records?.[0] || null;
+}
+
+async function airtableFindActivePurchase(env, tableId, email) {
+  const formula = `AND({Client Email}='${escapeFormulaString(email.toLowerCase())}',{Status}='Active')`;
+  const url = `https://api.airtable.com/v0/${env.AIRTABLE_BASE_ID}/${tableId}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}&sort%5B0%5D%5Bfield%5D=Paid%20Date&sort%5B0%5D%5Bdirection%5D=desc`;
+  const res = await fetch(url, { headers: airtableHeaders(env) });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.records?.[0] || null;
+}
+
+async function upsertClientByEmail(env, { name, email, stage, source, lastActivity, notes }) {
+  const clientsTable = env.AIRTABLE_CLIENTS_TABLE_ID;
+  if (!clientsTable) return null;
+
+  const existing = await airtableFindByEmail(env, clientsTable, email, 'Email');
+  const today = lastActivity || new Date().toISOString().slice(0, 10);
+  const fields = {
+    'Full Name': name || 'Not provided',
+    Email: email,
+    Stage: stage || 'Prospect',
+    Source: source || 'Website',
+    'Last Activity': today,
+  };
+  if (notes) fields.Notes = notes;
+
+  if (existing) {
+    await airtablePatch(env, clientsTable, existing.id, fields);
+    return existing.id;
+  }
+
+  fields['First Contact'] = today;
+  const res = await airtablePost(env, clientsTable, fields);
+  if (!res.ok) {
+    console.error('Airtable client create error:', await res.text());
+    return null;
+  }
+  const data = await res.json();
+  return data.records?.[0]?.id || null;
+}
+
+function sessionTypeForSlug(packageSlug) {
+  if (!packageSlug) return '1:1';
+  if (packageSlug.includes('semi')) return 'Semi-Private';
+  if (packageSlug.includes('drop')) return 'Drop-in';
+  return '1:1';
+}
+
+async function savePackagePurchaseToAirtable(env, purchase) {
+  const purchasesTable = env.AIRTABLE_PURCHASES_TABLE_ID;
+  if (!hasAirtable(env) || !purchasesTable) {
+    console.log('[AIRTABLE SKIP] Missing purchases table — package not saved:', purchase.email);
+    return;
+  }
+
+  const paidDate = purchase.paidAt.slice(0, 10);
+  await upsertClientByEmail(env, {
+    name: purchase.name,
+    email: purchase.email,
+    stage: 'Active Client',
+    source: 'Website',
+    lastActivity: paidDate,
+    notes: `Purchased: ${purchase.label}`,
+  });
+
+  const remaining = Math.max(purchase.sessions - 0, purchase.sessions);
+  const res = await airtablePost(env, purchasesTable, {
+    Purchase: `${purchase.name} — ${purchase.label}`,
+    'Client Email': purchase.email,
+    'Package Name': purchase.label,
+    'Package Slug': purchase.packageSlug,
+    'Session Type': sessionTypeForSlug(purchase.packageSlug),
+    'Total Sessions': purchase.sessions,
+    'Sessions Used': 0,
+    'Sessions Remaining': remaining,
+    'Amount Paid': (purchase.amountCents || 0) / 100,
+    'Paid Date': paidDate,
+    'Stripe Session ID': purchase.stripeSessionId,
+    'Booking Token': purchase.token,
+    'Booking URL': purchase.bookingUrl,
+    Status: 'Active',
+  });
+
+  if (!res.ok) {
+    console.error('Airtable package purchase error:', await res.text());
+  }
+}
+
+async function saveSessionBookingToAirtable(env, booking) {
+  const sessionsTable = env.AIRTABLE_SESSIONS_TABLE_ID;
+  const purchasesTable = env.AIRTABLE_PURCHASES_TABLE_ID;
+  if (!hasAirtable(env) || !sessionsTable) return;
+
+  const sessionDate = booking.sessionDate.slice(0, 10);
+  const sessionLabel = `${sessionDate} — ${booking.packageName || 'Session'}`;
+
+  await upsertClientByEmail(env, {
+    email: booking.email,
+    stage: 'Active Client',
+    source: 'Website',
+    lastActivity: sessionDate,
+  });
+
+  const res = await airtablePost(env, sessionsTable, {
+    Session: sessionLabel,
+    'Client Email': booking.email,
+    'Package Name': booking.packageName || '',
+    'Session Date': sessionDate,
+    'Session Time': booking.sessionTime || '',
+    'Cal Booking UID': booking.calBookingUid || '',
+    Status: 'Scheduled',
+  });
+
+  if (!res.ok) {
+    console.error('Airtable session booking error:', await res.text());
+    return;
+  }
+
+  if (!purchasesTable) return;
+
+  const purchase = await airtableFindActivePurchase(env, purchasesTable, booking.email);
+  if (!purchase) return;
+
+  const fields = purchase.fields || {};
+  const total = Number(fields['Total Sessions']) || booking.sessionsTotal || 0;
+  const used = booking.sessionsUsed || Number(fields['Sessions Used']) || 0;
+  const remaining = Math.max(total - used, 0);
+  const status = remaining === 0 ? 'Completed' : 'Active';
+
+  await airtablePatch(env, purchasesTable, purchase.id, {
+    'Sessions Used': used,
+    'Sessions Remaining': remaining,
+    Status: status,
+  });
+}
+
+function formatSessionTime(isoString) {
+  try {
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'America/New_York',
+    });
+  } catch {
+    return '';
   }
 }
 
@@ -664,6 +889,16 @@ function jsonResponse(data, status, cors) {
     status,
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
+}
+
+function parseMerchReference(ref) {
+  if (!ref) return { colorSlug: null, size: null };
+  const match = ref.match(/^logo-tshirt-(black|brown|blue)(?:-(xs|s|m|l|xl))?$/i);
+  if (!match) return { colorSlug: null, size: null };
+  return {
+    colorSlug: match[1].toLowerCase(),
+    size: match[2] ? normalizeSize(match[2]) : null,
+  };
 }
 
 function normalizeSize(raw) {

@@ -1,17 +1,14 @@
 /**
- * Merch checkout — creates a Stripe Checkout Session via the package-booking Worker.
+ * Merch checkout — redirects to a Stripe Payment Link for the selected colorway + size.
  *
- * Requires on the page:
- *   <body data-merch-color="black|brown|blue">
- *   <script>var WORKER_URL = 'https://package-booking.elombe.workers.dev';</script>
+ * Requires:
+ *   <script src="../js/merch-payment-links.js"></script>
+ *   body data-merch-color or form input[name="color"]
  */
 (function () {
   document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector('form.form-2');
     if (!form) return;
-
-    var colorSlug = (document.body.getAttribute('data-merch-color') || '').toLowerCase().trim();
-    if (!colorSlug) return;
 
     var submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
     var sizeError = document.getElementById('merch-size-error');
@@ -26,13 +23,13 @@
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      var nameInput = form.querySelector('input[name="Name"], input[name="name"]');
       var emailInput = form.querySelector('input[name="Email"], input[name="email"], input[type="email"]');
       var sizeInput = form.querySelector('input[name="size"]:checked');
+      var colorInput = form.querySelector('input[name="color"]:checked');
 
-      var name = nameInput ? nameInput.value.trim() : '';
       var email = emailInput ? emailInput.value.trim().toLowerCase() : '';
       var size = sizeInput ? normalizeSizeValue(sizeInput.value) : '';
+      var colorSlug = getColorSlug(colorInput);
 
       clearCheckoutError();
 
@@ -43,71 +40,62 @@
         return;
       }
 
-      var workerUrl = (typeof WORKER_URL !== 'undefined' ? WORKER_URL : '').replace(/\/$/, '');
-      if (!workerUrl || workerUrl === 'WORKER_URL_PLACEHOLDER') {
-        showCheckoutError('Checkout is not configured yet. Please try again later.');
+      if (emailInput && !emailInput.checkValidity()) {
+        emailInput.reportValidity();
+        return;
+      }
+
+      var allLinks = typeof MERCH_PAYMENT_LINKS !== 'undefined' ? MERCH_PAYMENT_LINKS : {};
+      var links = allLinks[colorSlug];
+      if (!links) {
+        showCheckoutError('Checkout is not configured for this colorway yet.');
+        return;
+      }
+
+      var baseUrl = links[size];
+      if (!baseUrl) {
+        showCheckoutError('Checkout is not configured for this size yet.');
         return;
       }
 
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.dataset.originalValue = submitBtn.value || submitBtn.textContent;
-        if (submitBtn.tagName === 'INPUT') {
-          submitBtn.value = 'Please wait...';
-        } else {
-          submitBtn.textContent = 'Please wait...';
-        }
       }
 
-      fetch(workerUrl + '/create-merch-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          size: size,
-          colorSlug: colorSlug,
-        }),
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          if (data.ok && data.url) {
-            window.location.href = data.url;
-            return;
-          }
-          throw new Error(data.error || 'Unable to start checkout');
-        })
-        .catch(function (err) {
-          showCheckoutError(err.message || 'Something went wrong. Please try again.');
-          resetSubmit();
-        });
-
-      function resetSubmit() {
-        if (!submitBtn) return;
-        submitBtn.disabled = false;
-        if (submitBtn.tagName === 'INPUT') {
-          submitBtn.value = submitBtn.dataset.originalValue || 'Next';
-        } else {
-          submitBtn.textContent = submitBtn.dataset.originalValue || 'Next';
-        }
-      }
-
-      function showCheckoutError(message) {
-        if (checkoutError) {
-          checkoutError.textContent = message;
-          checkoutError.style.display = 'block';
-          checkoutError.focus();
-          return;
-        }
-        alert(message);
-      }
-
-      function clearCheckoutError() {
-        if (checkoutError) {
-          checkoutError.style.display = 'none';
-        }
-      }
+      window.location.href = buildPaymentUrl(baseUrl, colorSlug, size, email);
     }, true);
+
+    function getColorSlug(colorInput) {
+      if (colorInput && colorInput.value) {
+        return colorInput.value.toLowerCase().trim();
+      }
+      return (document.body.getAttribute('data-merch-color') || '').toLowerCase().trim();
+    }
+
+    function buildPaymentUrl(baseUrl, color, size, email) {
+      var url = new URL(baseUrl);
+      url.searchParams.set('client_reference_id', 'logo-tshirt-' + color + '-' + size.toLowerCase());
+      if (email) {
+        url.searchParams.set('prefilled_email', email);
+      }
+      return url.toString();
+    }
+
+    function showCheckoutError(message) {
+      if (checkoutError) {
+        checkoutError.textContent = message;
+        checkoutError.style.display = 'block';
+        checkoutError.focus();
+        return;
+      }
+      alert(message);
+    }
+
+    function clearCheckoutError() {
+      if (checkoutError) {
+        checkoutError.style.display = 'none';
+      }
+    }
   });
 
   function normalizeSizeValue(raw) {
