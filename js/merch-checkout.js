@@ -45,8 +45,12 @@
         return;
       }
 
-      var allLinks = typeof MERCH_PAYMENT_LINKS !== 'undefined' ? MERCH_PAYMENT_LINKS : {};
-      var links = allLinks[colorSlug];
+      if (typeof MERCH_PAYMENT_LINKS === 'undefined') {
+        showCheckoutError('Checkout failed to load. Please refresh the page and try again.');
+        return;
+      }
+
+      var links = MERCH_PAYMENT_LINKS[colorSlug];
       if (!links) {
         showCheckoutError('Checkout is not configured for this colorway yet.');
         return;

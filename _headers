@@ -5,10 +5,10 @@
   Cache-Control: public, max-age=300, must-revalidate
 
 /js/merch-checkout.js
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 /js/merch-payment-links.js
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
 
 /js/merch-product.js
-  Cache-Control: public, max-age=300, must-revalidate
+  Cache-Control: no-cache, must-revalidate
