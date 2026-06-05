@@ -185,11 +185,17 @@
           name:     nameVal || 'Not provided',
           email:    emailVal,
           package:  pkgLabel,
-          ideal_dates: niceList.length ? niceList.join(', ') : 'No dates selected',
           _cc:      emailVal,
           _template:'table',
           _captcha: 'false',
         };
+        if (niceList.length) {
+          niceList.forEach(function (date, i) {
+            fsBody['Preferred date ' + (i + 1)] = date;
+          });
+        } else {
+          fsBody['Preferred dates'] = 'No dates selected';
+        }
         var fsP = fetch('https://formsubmit.co/ajax/builtbymeez1@gmail.com', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
