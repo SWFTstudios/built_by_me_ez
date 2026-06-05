@@ -6,7 +6,7 @@ Cloudflare Worker that powers training package booking and merch t-shirt checkou
 
 ### Training packages
 ```
-Client → Stripe Payment Link
+Client → Stripe Payment Link (training packages + merch t-shirts)
          ↓ webhook (checkout.session.completed)
 Cloudflare Worker → writes KV, emails booking link via FormSubmit
          ↓ client opens link
@@ -17,11 +17,11 @@ Cal.com webhook → POST /webhook/cal → Worker decrements credit
 
 ### Merch (t-shirts)
 ```
-Product page form → POST /create-merch-checkout → Stripe Checkout Session
+Product page → select colorway + size → redirect to Stripe Payment Link ($35)
          ↓ payment complete
 Stripe webhook (checkout.session.completed) → Worker
          ↓
-Airtable Merch Orders + admin email + customer confirmation email
+Airtable Merch Orders + admin email to builtbymeez1@gmail.com + customer confirmation email
 ```
 
 ---
