@@ -11,6 +11,7 @@ id = "66dd167618ac4c97927a7eeebfb56cd7"
 
 # Secrets (set via CLI, never commit values):
 #   wrangler secret put STRIPE_WEBHOOK_SECRET
+#   wrangler secret put STRIPE_SECRET_KEY
 #   wrangler secret put AIRTABLE_API_KEY
 #   wrangler secret put SITE_URL
 
@@ -22,3 +23,8 @@ FORM_SUBMIT_EMAIL = "builtbymeez1@gmail.com"
 # Airtable — base and table IDs are not sensitive, stored as vars
 AIRTABLE_BASE_ID  = "appSi0KcCQ41rm4XK"
 AIRTABLE_TABLE_ID = "tblByao55M5tzJWHf"
+AIRTABLE_MERCH_TABLE_ID = "tblag8GKEST2f6DnW"
+# Stripe prices — Built By Me EZ Logo T-Shirt (prod_UeNIfqoPJFKKH2)
+STRIPE_PRICE_BLACK = "price_1Tf4YUEO3guv2SPL6ZRUC0JV"
+STRIPE_PRICE_BROWN = "price_1Tf4YUEO3guv2SPLG0WPBcAN"
+STRIPE_PRICE_BLUE  = "price_1Tf4YUEO3guv2SPLKrK0mBrh"
