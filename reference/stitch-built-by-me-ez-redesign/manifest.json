@@ -1,0 +1,14 @@
+{
+  "projectId": "11784673605105771486",
+  "projectTitle": "Built By Me EZ Redesign",
+  "screenId": "de8f9fea08c14405998ec8fbcabaeacc",
+  "title": "Redesigned Product Page - Built By Me EZ",
+  "width": "2560",
+  "height": "6348",
+  "deviceType": "DESKTOP",
+  "fetchedAt": "2026-06-05T21:23:11.653Z",
+  "files": {
+    "screenshot": "reference/stitch-built-by-me-ez-redesign/screens/redesigned-product-page/screen.png",
+    "html": "reference/stitch-built-by-me-ez-redesign/screens/redesigned-product-page/code.html"
+  }
+}
