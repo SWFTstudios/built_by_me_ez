@@ -6,22 +6,28 @@
  *   POST /webhook/cal     — Cal.com BOOKING_CREATED (decrements credit)
  *   GET  /validate        — ?token=TOKEN  → session info for booking portal
  *   POST /resend-link     — {email} → re-emails the booking link
- *   POST /save-lead       — saves interest lead to Airtable + emails user confirmation
+ *   POST /save-lead       — saves interest lead to Airtable (client FormSubmit handles user email)
  *
  * KV keys:
  *   credits:{email}   → { packageSlug, calSlug, label, total, used, token, paidAt }
  *   token:{token}     → { email }
  *
  * Required environment bindings (set via Cloudflare dashboard or wrangler):
- *   CREDITS_KV           — KV namespace
+ *   CREDITS_KV            — KV namespace
  *   STRIPE_WEBHOOK_SECRET — whsec_... from Stripe dashboard
- *   RESEND_API_KEY        — re_... from resend.com
  *   SITE_URL              — e.g. https://builtbymeez.com
+ *   FORM_SUBMIT_EMAIL     — builtbymeez1@gmail.com (wrangler.toml [vars])
  *   CAL_USERNAME          — e.g. omar-ndiaye-illqmu
  *   AIRTABLE_API_KEY      — personal access token (pat...) from airtable.com/create/tokens
  *   AIRTABLE_BASE_ID      — set in wrangler.toml [vars]
  *   AIRTABLE_TABLE_ID     — set in wrangler.toml [vars]
  */
+
+const ALLOWED_ORIGINS = [
+  'https://builtbymeez.com',
+  'https://builtbymeez-website.pages.dev',
+  'https://customer-onboarding-flow-upd.builtbymeez-website.pages.dev',
+];
 
 const PACKAGES = {
   '8-session-1-1':  { sessions: 8,  calSlug: '8-session-training-package',      label: '8-Session 1:1 Training' },
@@ -41,16 +47,26 @@ const AMOUNT_TO_PACKAGE = {
   55000: '12-session-semi',
 };
 
+function corsHeaders(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const siteUrl = env.SITE_URL || 'https://builtbymeez.com';
+  let allowOrigin = siteUrl;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    allowOrigin = origin;
+  } else if (origin.endsWith('.builtbymeez-website.pages.dev')) {
+    allowOrigin = origin;
+  }
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const origin = request.headers.get('Origin') || '';
-
-    const cors = {
-      'Access-Control-Allow-Origin': env.SITE_URL || '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    };
+    const cors = corsHeaders(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: cors });
@@ -142,9 +158,8 @@ async function handleStripeWebhook(request, env, cors) {
     env.CREDITS_KV.put(tokenKey, JSON.stringify({ email }), { expirationTtl: 60 * 60 * 24 * 365 }),
   ]);
 
-  const bookingUrl = `${env.SITE_URL}/book-sessions.html?token=${token}`;
-  await sendBookingEmail(env, email, pkg, bookingUrl);
-  await notifyOmar(env, email, pkg, bookingUrl);
+  const bookingUrl = `${getSiteUrl(env)}/book-sessions.html?token=${token}`;
+  await sendPackageBookingEmail(env, email, pkg, bookingUrl);
 
   return new Response('OK', { status: 200, headers: cors });
 }
@@ -238,8 +253,8 @@ async function handleResendLink(request, env, cors) {
 
   const record = JSON.parse(creditsRaw);
   const pkg = PACKAGES[record.packageSlug];
-  const bookingUrl = `${env.SITE_URL}/book-sessions.html?token=${record.token}`;
-  await sendBookingEmail(env, email, pkg, bookingUrl);
+  const bookingUrl = `${getSiteUrl(env)}/book-sessions.html?token=${record.token}`;
+  await sendPackageBookingEmail(env, email, pkg, bookingUrl, 'Booking link resend');
 
   return jsonResponse({ ok: true }, 200, cors);
 }
@@ -281,58 +296,46 @@ async function verifyStripeSignature(payload, sigHeader, secret) {
   if (age > 300) throw new Error('Timestamp too old');
 }
 
-async function sendBookingEmail(env, email, pkg, bookingUrl) {
-  if (!env.RESEND_API_KEY) {
-    console.log(`[EMAIL SKIP] Would send booking link to ${email}: ${bookingUrl}`);
-    return;
-  }
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Built By Me EZ <noreply@builtbymeez.com>',
-      to: email,
-      subject: `Your ${pkg.label} booking link is ready`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111;">
-          <img src="${env.SITE_URL}/images/Built-By-ME-EZ-Logo-Favicon.avif" alt="Built By Me EZ" width="120" style="margin-bottom:24px;">
-          <h1 style="font-size:24px;margin-bottom:8px;">You're all set!</h1>
-          <p>Payment confirmed for your <strong>${pkg.label}</strong> package (${pkg.sessions} sessions).</p>
-          <p>Use the link below to book your sessions. Each time you book, your session count decrements automatically.</p>
-          <a href="${bookingUrl}"
-             style="display:inline-block;margin:20px 0;padding:14px 28px;background:#ff4d00;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;">
-            Book My Sessions →
-          </a>
-          <p style="font-size:13px;color:#555;">This link is personal to you. Bookmark it — you'll use it to book all ${pkg.sessions} sessions.</p>
-          <p style="font-size:13px;color:#555;">Questions? Call <a href="tel:+12017598043" style="color:#ff4d00;">+1 (201) 759-8043</a> or email <a href="mailto:builtbymeez1@gmail.com" style="color:#ff4d00;">builtbymeez1@gmail.com</a>.</p>
-        </div>`,
-    }),
-  });
+function getSiteUrl(env) {
+  return (env.SITE_URL || 'https://builtbymeez.com').replace(/\/$/, '');
 }
 
-async function notifyOmar(env, clientEmail, pkg, bookingUrl) {
-  if (!env.RESEND_API_KEY) return;
+async function sendFormSubmit(env, { subject, fields, cc }) {
+  const formEmail = env.FORM_SUBMIT_EMAIL || 'builtbymeez1@gmail.com';
+  const body = {
+    _subject: subject,
+    _template: 'table',
+    _captcha: 'false',
+    ...fields,
+  };
+  if (cc) body._cc = cc;
 
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${formEmail}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error('FormSubmit error:', res.status, await res.text());
+    }
+  } catch (err) {
+    console.error('FormSubmit error:', err);
+  }
+}
+
+async function sendPackageBookingEmail(env, clientEmail, pkg, bookingUrl, typeLabel) {
+  await sendFormSubmit(env, {
+    subject: typeLabel || `New package sale: ${pkg.label}`,
+    cc: clientEmail,
+    fields: {
+      email: clientEmail,
+      package: pkg.label,
+      sessions: String(pkg.sessions),
+      booking_url: bookingUrl,
+      type: typeLabel || 'Package purchase',
+      message: `Booking link for customer: ${bookingUrl}`,
     },
-    body: JSON.stringify({
-      from: 'Built By Me EZ <noreply@builtbymeez.com>',
-      to: 'builtbymeez1@gmail.com',
-      subject: `New package sale: ${pkg.label}`,
-      html: `
-        <p><strong>New package purchase!</strong></p>
-        <p>Client: ${clientEmail}<br>
-           Package: ${pkg.label} (${pkg.sessions} sessions)<br>
-           Booking link: <a href="${bookingUrl}">${bookingUrl}</a></p>`,
-    }),
   });
 }
 
@@ -347,10 +350,7 @@ async function handleSaveLead(request, env, cors) {
     return jsonResponse({ ok: false, error: 'Email required' }, 400, cors);
   }
 
-  await Promise.all([
-    saveLeadToAirtable(env, body),
-    sendLeadConfirmationEmail(env, body),
-  ]);
+  await saveLeadToAirtable(env, body);
 
   return jsonResponse({ ok: true }, 200, cors);
 }
@@ -389,47 +389,6 @@ async function saveLeadToAirtable(env, { name, email, package_label, ideal_dates
     const err = await res.text();
     console.error('Airtable save-lead error:', err);
   }
-}
-
-async function sendLeadConfirmationEmail(env, { name, email, package_label, ideal_dates, stripe_link }) {
-  if (!env.RESEND_API_KEY) {
-    console.log('[EMAIL SKIP] Would send lead confirmation to', email);
-    return;
-  }
-
-  const firstName = (name || '').split(' ')[0] || 'there';
-  const datesHtml = (ideal_dates && ideal_dates.length)
-    ? '<ul style="padding-left:1.2em;">' + ideal_dates.map(d => `<li>${d}</li>`).join('') + '</ul>'
-    : '<p style="color:#666;">No specific dates selected.</p>';
-
-  const payBtn = stripe_link && stripe_link !== '#'
-    ? `<a href="${stripe_link}" style="display:inline-block;margin:20px 0;padding:14px 28px;background:#ff4d00;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;">Pay &amp; Lock In My Sessions →</a>`
-    : '';
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Built By Me EZ <noreply@builtbymeez.com>',
-      to: email,
-      subject: `Your ideal training dates are saved — ${package_label}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#111;">
-          <img src="${env.SITE_URL}/images/Built-By-ME-EZ-Logo-Favicon.avif" alt="Built By Me EZ" width="120" style="margin-bottom:24px;">
-          <h1 style="font-size:22px;margin-bottom:8px;">Hey ${firstName}, your dates are saved!</h1>
-          <p>We've got your preferred training schedule on file for the <strong>${package_label}</strong> package.</p>
-          <p><strong>Your selected dates:</strong></p>
-          ${datesHtml}
-          <p>When you're ready to lock these in, pay below and we'll send you a personal booking link to confirm each session.</p>
-          ${payBtn}
-          <p style="font-size:13px;color:#555;margin-top:24px;">Questions? Call <a href="tel:+12017598043" style="color:#ff4d00;">+1 (201) 759-8043</a> or email <a href="mailto:builtbymeez1@gmail.com" style="color:#ff4d00;">builtbymeez1@gmail.com</a>.</p>
-          <p style="font-size:11px;color:#999;margin-top:16px;">You're receiving this because you submitted the date-interest form on builtbymeez.com. No further emails will be sent unless you purchase a package.</p>
-        </div>`,
-    }),
-  });
 }
 
 function jsonResponse(data, status, cors) {

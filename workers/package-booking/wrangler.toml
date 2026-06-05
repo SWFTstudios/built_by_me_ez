@@ -7,18 +7,18 @@ compatibility_date = "2024-01-01"
 # Then paste the resulting ID below.
 [[kv_namespaces]]
 binding = "CREDITS_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "66dd167618ac4c97927a7eeebfb56cd7"
 
 # Secrets (set via CLI, never commit values):
 #   wrangler secret put STRIPE_WEBHOOK_SECRET
-#   wrangler secret put RESEND_API_KEY
+#   wrangler secret put AIRTABLE_API_KEY
 #   wrangler secret put SITE_URL
-#   wrangler secret put CAL_USERNAME
 
 [vars]
 # Non-sensitive defaults (override with secrets for production)
 CAL_USERNAME = "omar-ndiaye-illqmu"
 SITE_URL = "https://builtbymeez.com"
+FORM_SUBMIT_EMAIL = "builtbymeez1@gmail.com"
 # Airtable — base and table IDs are not sensitive, stored as vars
 AIRTABLE_BASE_ID  = "appSi0KcCQ41rm4XK"
 AIRTABLE_TABLE_ID = "tblByao55M5tzJWHf"

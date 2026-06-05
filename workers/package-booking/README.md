@@ -7,7 +7,7 @@ Cloudflare Worker that powers the pay-first, self-serve session booking flow.
 ```
 Client → Stripe Payment Link
          ↓ webhook (checkout.session.completed)
-Cloudflare Worker → writes KV, emails booking link
+Cloudflare Worker → writes KV, emails booking link via FormSubmit
          ↓ client opens link
 book-sessions.html → GET /validate?token=TOKEN → Worker reads KV → Cal.com embed
          ↓ client books
@@ -27,14 +27,14 @@ npx wrangler kv:namespace create CREDITS_KV
 ### Set secrets
 ```bash
 npx wrangler secret put STRIPE_WEBHOOK_SECRET   # whsec_... from Stripe → Webhooks
-npx wrangler secret put RESEND_API_KEY           # re_... from resend.com
-npx wrangler secret put SITE_URL                 # https://builtbymeez.com (no trailing slash)
+npx wrangler secret put AIRTABLE_API_KEY        # pat_... (optional but recommended)
+npx wrangler secret put SITE_URL                # https://builtbymeez.com (no trailing slash)
 ```
 
 ### Deploy
 ```bash
 npx wrangler deploy
-# Note the Worker URL: https://package-booking.YOUR_SUBDOMAIN.workers.dev
+# Note the Worker URL: https://package-booking.elombe.workers.dev
 ```
 
 ---
@@ -60,7 +60,7 @@ This tells the Worker which package was purchased.
 
 ### Register the webhook
 1. Stripe Dashboard → Developers → Webhooks → Add endpoint
-2. URL: `https://package-booking.YOUR_SUBDOMAIN.workers.dev/webhook/stripe`
+2. URL: `https://package-booking.elombe.workers.dev/webhook/stripe`
 3. Events: `checkout.session.completed`
 4. Copy the **Signing secret** → set as `STRIPE_WEBHOOK_SECRET`
 
@@ -69,17 +69,17 @@ This tells the Worker which package was purchased.
 ## 3. Cal.com Setup (credit auto-decrement)
 
 1. Cal.com Dashboard → Developer → Webhooks → Add webhook
-2. URL: `https://package-booking.YOUR_SUBDOMAIN.workers.dev/webhook/cal`
+2. URL: `https://package-booking.elombe.workers.dev/webhook/cal`
 3. Trigger: `BOOKING_CREATED`
 4. Add for each of the 6 package event types
 
 ---
 
-## 4. Email Setup (Resend)
+## 4. Email (FormSubmit)
 
-1. Create a free account at [resend.com](https://resend.com)
-2. Verify your sending domain (`builtbymeez.com`)
-3. Create an API key → set as `RESEND_API_KEY`
+Booking confirmation emails are sent via [FormSubmit](https://formsubmit.co) to `builtbymeez1@gmail.com` (configured in `wrangler.toml` as `FORM_SUBMIT_EMAIL`). The customer receives a CC copy via `_cc` (AJAX does not support `_autoresponse`).
+
+Lead capture confirmation emails are handled client-side in `js/lead-capture.js`.
 
 ---
 
@@ -87,7 +87,7 @@ This tells the Worker which package was purchased.
 
 After deploying the Worker, open `book-sessions.html` and replace `WORKER_URL_PLACEHOLDER`:
 ```js
-var WORKER_URL = 'https://package-booking.YOUR_SUBDOMAIN.workers.dev';
+var WORKER_URL = 'https://package-booking.elombe.workers.dev';
 ```
 
 ---
