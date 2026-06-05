@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Order Confirmed | Built By Me EZ</title>
+  <meta content="Your Built By Me EZ t-shirt order is confirmed." name="description">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link href="../css/normalize.css" rel="stylesheet" type="text/css">
+  <link href="../css/components.css" rel="stylesheet" type="text/css">
+  <link href="../css/builtbymeez.css" rel="stylesheet" type="text/css">
+  <link href="../images/favicon.jpg" rel="shortcut icon" type="image/x-icon">
+</head>
+<body data-merch-color="">
+  <div class="page-wrapper">
+    <main class="main-wrapper">
+      <section class="section">
+        <div class="side-panel"></div>
+        <div class="container-2">
+          <div class="contact_column is-left">
+            <a href="../index.html" class="logo_link w-inline-block">
+              <p class="logo_text">BUILT BY ME EZ</p>
+            </a>
+          </div>
+          <div class="contact_column is-right">
+            <div class="form w-form">
+              <h1 class="logo_text" style="margin-bottom: 1rem;">Thank you for your order</h1>
+              <p id="confirmation-message" style="margin-bottom: 1.5rem; line-height: 1.6;">
+                Your payment was successful. A confirmation email is on its way with your order details.
+              </p>
+              <div class="w-layout-hflex form-button-wrapper">
+                <a href="../index.html#MERCH" class="back-home-button w-button">Back to Merch</a>
+                <a href="../index.html" class="submit w-button" style="text-align: center;">Home</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var color = (params.get('color') || '').toLowerCase();
+      var labels = { black: 'Black', brown: 'Brown', blue: 'Blue' };
+      if (labels[color]) {
+        document.getElementById('confirmation-message').textContent =
+          'Your payment for the Built By Me EZ Logo T-Shirt in ' + labels[color] +
+          ' was successful. A confirmation email is on its way with your size and order details.';
+      }
+    })();
+  </script>
+</body>
+</html>
