@@ -3245,3 +3245,110 @@ a {
   }
 }
 
+/* ─── Fixed bottom package CTAs ──────────────────────────────────────────── */
+
+.package-page {
+  padding-bottom: 5.5rem;
+}
+
+#package-pay,
+#package-lead-capture {
+  scroll-margin-top: 5.5rem;
+}
+
+.package-sticky-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 998;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: #0a0a0a;
+  border-top: 1px solid #222;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+  transition: transform 0.25s ease;
+}
+
+.package-sticky-cta.is-hidden {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+.package-sticky-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 4px;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  transition: opacity 0.15s;
+}
+
+.package-sticky-btn--pay {
+  background: var(--chocolate);
+  color: #fff;
+}
+
+.package-sticky-btn--pay:hover {
+  opacity: 0.88;
+  color: #fff;
+}
+
+.package-sticky-btn--lead {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+.package-sticky-btn--lead:hover {
+  border-color: var(--chocolate);
+  color: var(--chocolate);
+}
+
+@media screen and (max-width: 767px) {
+  .package-sticky-btn--pay-desktop {
+    display: none;
+  }
+
+  .package-sticky-cta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .package-sticky-btn--pay-mobile {
+    display: none;
+  }
+
+  .package-sticky-cta {
+    max-width: 42rem;
+    margin-left: auto;
+    margin-right: auto;
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    border: 1px solid #222;
+    border-radius: 6px;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media screen and (max-width: 479px) {
+  .package-sticky-cta {
+    grid-template-columns: 1fr;
+  }
+
+  .package-sticky-btn {
+    font-size: 0.9rem;
+  }
+}
+

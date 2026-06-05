@@ -23,7 +23,10 @@
   <link href="images/favicon.jpg" rel="shortcut icon" type="image/x-icon">
   <link href="images/webclip.jpg" rel="apple-touch-icon">
 </head>
-<body class="body-2">
+<body class="body-2 package-page"
+  data-pay-label="Pay $550 Now →"
+  data-stripe-link="https://buy.stripe.com/3cI8wPc3rgEBdEs3Hu04804?client_reference_id=12-session-semi"
+  data-lead-label="Save My Ideal Dates →">
   <div class="page-wrapper">
     <div class="main-wrapper">
       <div data-animation="over-left" class="navbar_component w-nav" data-easing2="ease-out-quint" data-easing="ease-out-quint" data-collapse="medium" role="banner" data-no-scroll="1" data-duration="400" data-doc-height="1">
@@ -60,7 +63,7 @@
           </div>
         </div>
       </div>
-      <div class="section-booking-pay page-padding">
+      <div id="package-pay" class="section-booking-pay page-padding">
         <div class="container">
           <div class="pay-flow-wrapper">
             <div class="pay-steps-list">
@@ -69,7 +72,7 @@
                 <div class="pay-step-body">
                   <h3 class="pay-step-heading">Pay for your full package</h3>
                   <p class="pay-step-text">One payment covers all 12 sessions. You'll receive a private booking link by email within minutes of payment.</p>
-                  <a href="https://buy.stripe.com/YOUR_STRIPE_LINK_12_SESSION_SEMI?client_reference_id=12-session-semi" class="pay-now-btn" target="_blank" rel="noopener noreferrer">Pay $550 Now →</a>
+                  <a href="https://buy.stripe.com/3cI8wPc3rgEBdEs3Hu04804?client_reference_id=12-session-semi" class="pay-now-btn" target="_blank" rel="noopener noreferrer">Pay $550 Now →</a>
                 </div>
               </div>
               <div class="pay-step">
@@ -103,10 +106,10 @@
           </div>
         </div>
       </div>
-      <div class="section-lead-capture page-padding"
+      <div id="package-lead-capture" class="section-lead-capture page-padding"
            data-package-label="12-Session Semi-Private"
            data-package-slug="12-session-semi"
-           data-stripe-link="https://buy.stripe.com/YOUR_STRIPE_LINK_12_SESSION_SEMI?client_reference_id=12-session-semi">
+           data-stripe-link="https://buy.stripe.com/3cI8wPc3rgEBdEs3Hu04804?client_reference_id=12-session-semi">
         <div class="container">
           <div class="lead-capture-wrapper">
             <div class="lead-capture-intro">
@@ -154,5 +157,6 @@
   <script>var WORKER_URL = 'WORKER_URL_PLACEHOLDER';</script>
   <script src="js/builtbymeez.js" type="text/javascript"></script>
   <script src="js/lead-capture.js" type="text/javascript"></script>
+  <script src="js/package-sticky-cta.js" type="text/javascript"></script>
 </body>
 </html>

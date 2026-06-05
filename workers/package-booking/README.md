@@ -92,6 +92,8 @@ var WORKER_URL = 'https://package-booking.YOUR_SUBDOMAIN.workers.dev';
 
 ---
 
-## 6. Update package page payment links
+## 6. Package page payment links
 
-In each package HTML page, replace `YOUR_STRIPE_LINK_*` with the real Stripe Payment Link URLs from your dashboard (with the `?client_reference_id=SLUG` suffix).
+Payment link URLs are configured in the 6 package HTML pages on branch `customer-onboarding-flow-update-6.5.26` (`.pay-now-btn` href and `.section-lead-capture` `data-stripe-link`), each with the correct `?client_reference_id=SLUG` suffix.
+
+See the Stripe setup summary in the project chat / deployment notes for Product ID, Price ID, Payment Link ID, and full URLs.
