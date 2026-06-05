@@ -3095,14 +3095,15 @@ a {
 }
 
 /* Two-month side-by-side layout */
-.lead-cal-months {
-  display: grid;
+.section-lead-capture .lead-cal-months {
+  display: grid !important;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
 }
 
-.lead-cal-month {
+.section-lead-capture .lead-cal-month {
   min-width: 0;
+  overflow: hidden;
 }
 
 .lead-cal-month-name {
@@ -3115,13 +3116,17 @@ a {
   opacity: 0.7;
 }
 
-.lead-cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+.section-lead-capture .lead-cal-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 2px;
+  width: 100%;
 }
 
-.lead-cal-dow {
+.section-lead-capture .lead-cal-dow {
+  display: block;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: center;
   font-size: 0.72rem;
   opacity: 0.45;
@@ -3130,7 +3135,10 @@ a {
   text-transform: uppercase;
 }
 
-.lead-cal-day {
+.section-lead-capture .lead-cal-day {
+  display: block;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: center;
   padding: 0.4rem 0.2rem;
   border-radius: 4px;
@@ -3165,6 +3173,11 @@ a {
   font-size: 0.82rem;
   opacity: 0.6;
   text-align: center;
+}
+
+.section-lead-capture .lead-cal-count.at-limit {
+  color: #f87171;
+  opacity: 1;
 }
 
 /* Lead form */
@@ -3230,8 +3243,8 @@ a {
 .lead-msg.success { color: #6ee7b7; }
 
 @media screen and (max-width: 767px) {
-  .lead-cal-months {
-    grid-template-columns: 1fr;
+  .section-lead-capture .lead-cal-months {
+    grid-template-columns: 1fr !important;
     gap: 1.5rem;
   }
 

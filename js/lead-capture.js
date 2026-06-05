@@ -15,6 +15,15 @@
   var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var DAYS_LONG    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+  var SLUG_MAX_DATES = {
+    '8-session-1-1':  8,
+    '12-session-1-1': 12,
+    '16-session-1-1': 16,
+    '8-session-semi':  8,
+    '12-session-semi': 12,
+    '16-session-semi': 16,
+  };
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -38,14 +47,16 @@
 
   // ── Calendar picker ───────────────────────────────────────────────────────
 
-  function CalPicker(host) {
+  function CalPicker(host, maxDates) {
     this.host     = host;
+    this.maxDates = maxDates || 8;
     this.selected = [];
     this.today    = toIsoDate(new Date());
     var now       = new Date();
     this.year     = now.getFullYear();
     this.month    = now.getMonth();
     this.onChange = null;
+    this._atLimit = false;
     this._render();
   }
 
@@ -88,18 +99,18 @@
     frame.appendChild(el('div', 'lead-cal-month-name', MONTHS[month] + ' ' + year));
 
     var grid = el('div', 'lead-cal-grid');
-    DAYS.forEach(function (d) { grid.appendChild(el('span', 'lead-cal-dow', d)); });
+    DAYS.forEach(function (d) { grid.appendChild(el('div', 'lead-cal-dow', d)); });
 
     // Blank cells
     var firstDay = new Date(year, month, 1).getDay();
     for (var b = 0; b < firstDay; b++) {
-      grid.appendChild(el('span', 'lead-cal-day lead-cal-empty'));
+      grid.appendChild(el('div', 'lead-cal-day lead-cal-empty'));
     }
 
     var total = new Date(year, month + 1, 0).getDate();
     for (var d = 1; d <= total; d++) {
       var ds  = year + '-' + pad(month + 1) + '-' + pad(d);
-      var day = el('span', 'lead-cal-day', d);
+      var day = el('div', 'lead-cal-day', d);
       if (ds < self.today) {
         day.classList.add('past');
       } else {
@@ -109,13 +120,17 @@
           var date = ev.currentTarget.dataset.date;
           var idx  = self.selected.indexOf(date);
           if (idx === -1) {
+            if (self.selected.length >= self.maxDates) {
+              self._showLimitMsg();
+              return;
+            }
             self.selected.push(date);
             ev.currentTarget.classList.add('selected');
           } else {
             self.selected.splice(idx, 1);
             ev.currentTarget.classList.remove('selected');
           }
-          if (self._countEl) self._countEl.textContent = self._countText();
+          self._updateCountEl();
           if (self.onChange) self.onChange(self.selected.slice());
         });
       }
@@ -134,9 +149,33 @@
 
   CalPicker.prototype._countText = function () {
     var n = this.selected.length;
-    return n === 0
-      ? 'No dates selected — click any day to add one.'
-      : n + ' date' + (n !== 1 ? 's' : '') + ' selected';
+    var max = this.maxDates;
+    if (n === 0) {
+      return 'No dates selected — choose up to ' + max + '.';
+    }
+    return n + ' of ' + max + ' date' + (max !== 1 ? 's' : '') + ' selected';
+  };
+
+  CalPicker.prototype._limitText = function () {
+    return 'Maximum of ' + this.maxDates + ' dates — unselect a day to add another.';
+  };
+
+  CalPicker.prototype._updateCountEl = function () {
+    if (!this._countEl) return;
+    this._atLimit = false;
+    this._countEl.textContent = this._countText();
+    this._countEl.classList.remove('at-limit');
+  };
+
+  CalPicker.prototype._showLimitMsg = function () {
+    if (!this._countEl) return;
+    this._atLimit = true;
+    this._countEl.textContent = this._limitText();
+    this._countEl.classList.add('at-limit');
+  };
+
+  CalPicker.prototype._clearLimitMsg = function () {
+    this._updateCountEl();
   };
 
   // ── Init all .section-lead-capture blocks on the page ─────────────────────
@@ -157,7 +196,12 @@
       var btnEl    = section.querySelector('.lead-submit-btn');
       if (!calHost || !form) return;
 
-      var picker = new CalPicker(calHost);
+      var parsedMax = parseInt(section.dataset.maxDates, 10);
+      var maxDates  = (!isNaN(parsedMax) && parsedMax > 0)
+        ? parsedMax
+        : (SLUG_MAX_DATES[pkgSlug] || 8);
+
+      var picker = new CalPicker(calHost, maxDates);
       picker.onChange = function (dates) {
         if (datesIn) datesIn.value = dates.map(formatNice).join(', ');
       };
