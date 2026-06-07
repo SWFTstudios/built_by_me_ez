@@ -1,7 +1,7 @@
 {
   "name": "built_by_me_ez",
   "version": "1.0.0",
-  "description": "",
+  "description": "Built By Me EZ — Hackensack NJ personal training platform with Stripe packages, Cal.com booking, merch ecommerce, and Airtable CRM.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
