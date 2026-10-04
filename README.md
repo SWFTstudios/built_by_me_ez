@@ -1,6 +1,6 @@
 # Built By Me EZ
 
-**Hackensack, NJ personal training — packages, booking, and merch.**
+**Teaneck, NJ personal training — packages, booking, and merch.**
 
 Live site: [builtbymeez.com](https://builtbymeez.com)
 
@@ -12,7 +12,7 @@ Developed by [EK Web Development](https://elombekisala.com).
 
 ## Case Study at a Glance
 
-Omar runs a personalized fitness coaching business in Hackensack, NJ, serving Bergen County and surrounding areas. His website went from a marketing brochure to a **revenue and operations platform**:
+Omar runs a personalized fitness coaching business in Teaneck, NJ, serving Bergen County and surrounding areas. His website went from a marketing brochure to a **revenue and operations platform**:
 
 | Capability | How it works |
 |------------|--------------|

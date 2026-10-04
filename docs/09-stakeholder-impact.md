@@ -66,7 +66,7 @@ Built By Me EZ transformed from a marketing website into an **integrated busines
 
 ## The Client Perspective (Omar / Built By Me EZ)
 
-Omar Ndiaye operates a personal training business in Hackensack, NJ. The platform addresses pain points common to solo fitness entrepreneurs.
+Omar Ndiaye operates a personal training business in Teaneck, NJ. The platform addresses pain points common to solo fitness entrepreneurs.
 
 ### Before: manual operations
 
@@ -211,7 +211,7 @@ Track these metrics over 90 days post-launch to quantify business transformation
 
 > **Built By Me EZ: From Brochure to Business Platform**
 >
-> Omar Ndiaye built his reputation as a personal trainer in Hackensack, NJ—but his website only told his story. It couldn't sell packages, book sessions, or capture leads while he was training clients.
+> Omar Ndiaye built his reputation as a personal trainer in Hackensack, NJ, and now trains clients at 545 Cedar Lane in Teaneck—but his website only told his story. It couldn't sell packages, book sessions, or capture leads while he was training clients.
 >
 > EK Web Development transformed builtbymeez.com into an integrated platform: Stripe handles payments, a Cloudflare Worker orchestrates booking credits and CRM sync, Cal.com powers scheduling, and Airtable gives Omar a dashboard he actually uses.
 >

@@ -1,6 +1,6 @@
 # Chapter 1 — Brand and Vision
 
-**Built By Me EZ** is a personal training brand based in Hackensack, New Jersey, serving clients across Bergen County and surrounding areas. The website at [builtbymeez.com](https://builtbymeez.com) is not a static brochure—it is a **revenue and operations platform** that sells training packages, books sessions, captures leads, fulfills merch orders, and syncs customer data to a CRM.
+**Built By Me EZ** is a personal training brand based in Teaneck, New Jersey, serving clients across Bergen County and surrounding areas. The website at [builtbymeez.com](https://builtbymeez.com) is not a static brochure—it is a **revenue and operations platform** that sells training packages, books sessions, captures leads, fulfills merch orders, and syncs customer data to a CRM.
 
 ---
 
@@ -49,7 +49,7 @@ Omar's Cal.com account powers inline booking on drop-in pages and the post-purch
 
 ### Geographic focus
 
-- **Primary:** Hackensack, NJ
+- **Primary:** Teaneck, NJ — 545 Cedar Lane
 - **Service area:** Bergen County and surrounding counties (per site meta description)
 
 ### Customer segments
