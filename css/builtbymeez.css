@@ -1011,6 +1011,10 @@ a {
   font-weight: 500;
 }
 
+.footer .text-size-small .footer_link {
+  margin-left: 0;
+}
+
 .footer_link.hide {
   display: none;
 }
@@ -2761,6 +2765,26 @@ a {
 .booking-detail-stack .booking-package-note {
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
+}
+
+.training-hours-note {
+  margin-top: 1.25rem;
+  margin-bottom: 0;
+  max-width: 40rem;
+  opacity: 0.9;
+}
+
+#CLASSES .w-tab-pane > .training-hours-note,
+#SEMI-PRIVATE .training-hours-note {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.service-card .training-hours-note {
+  margin-top: 0.75rem;
+  max-width: none;
+  text-align: left;
 }
 
 .booking-detail-stack .booking-price-line {

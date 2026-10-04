@@ -171,6 +171,22 @@ Must match Worker `PACKAGES` calSlug values:
 - `12-session-semi-private-package`
 - `16-session-semi-private-package`
 
+Drop-in event types (no package portal):
+
+- `single-training-session`
+- `semi-private-drop-in`
+
+### Availability (Teaneck)
+
+Training is at **545 Cedar Lane, Teaneck, NJ**. Public hours on the site are copy-only; **bookable slots are controlled in Cal.com**. After a location or hours change, update the dashboard so the calendar matches the site:
+
+1. Set the **location** on every event type to `545 Cedar Lane, Teaneck, NJ`.
+2. **Semi-private** event types (`semi-private-drop-in`, `8-session-semi-private-package`, `12-session-semi-private-package`, `16-session-semi-private-package`): allow only **6:30am, 7:30am, 5:30pm, 6:30pm, and 7:30pm**.
+3. **1:1** event types (`single-training-session`, `8-session-training-package`, `12-session-1-1-training-package`, `16-session-package`): afternoon only (from 12:00pm until evening semi-private).
+4. Block **8:30am–12:00pm** on the connected calendar so no event type is bookable in that window.
+
+There is no Cal.com API in the Worker. These steps are dashboard-only.
+
 ---
 
 ## Airtable Configuration
