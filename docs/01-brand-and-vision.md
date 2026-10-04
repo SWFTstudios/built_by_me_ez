@@ -38,7 +38,7 @@ The merch product page uses a separate **IRON_CORE** design system (red containe
 |---------|--------|
 | Website | [builtbymeez.com](https://builtbymeez.com) |
 | Email | builtbymeez1@gmail.com |
-| Phone | +1 (201) 759-8043 |
+| Phone | +1 (201) 969-7990 |
 | Scheduling | Cal.com username `omar-ndiaye-illqmu` |
 
 Omar's Cal.com account powers inline booking on drop-in pages and the post-purchase session portal. Order notifications, package sales alerts, and lead submissions route to his inbox automatically.
